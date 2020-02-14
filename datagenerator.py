@@ -1,8 +1,5 @@
 from torch.utils.data import Dataset
 from PIL import Image
-import glob
-import os
-import pandas as pd
 import torch
 from torchvision import transforms
 from torch.utils.data import DataLoader
@@ -16,7 +13,7 @@ import json
 
 class ReadDataSource(Dataset):
     def __init__(self, x_dir, y_dir):
-        self.x_dir = x_dir  # folder '/joints_val_img', '/joints_test_img' or '/joints_train_img'
+        self.x_dir = x_dir  # .json dir
 
         with open(y_dir, 'rb') as f:
             self.y_dict = json.loads(f.read())
@@ -27,9 +24,9 @@ class ReadDataSource(Dataset):
         return len(self.x_list)
 
     def __getitem__(self, item):
-        x_ID = self.x_list[item]['image_id']  # hand number
+        x_ID = str(self.x_list[item]['image_id'])
         y_area = self.x_list[item]['area']
-        bbox = self.x_list[item]['bbox']
+        y_bbox = self.x_list[item]['bbox']
         y_category = self.x_list[item]['category_id']
 
         x_path = self.x_dir + x_ID + '.png'
@@ -37,22 +34,23 @@ class ReadDataSource(Dataset):
         x = torch.zeros((3, 1080, 1920))  # channel * height * width
         img = Image.open(x_path)
         img = transforms.Compose([
-            transforms.Resize((224, 224)),
+            # transforms.Resize((3, 256, 256)),
             transforms.ToTensor()
         ])(img)
         x[:, :, :] = img
 
-        y = self.y_list[item]  # bone age
+        y = y_category  #
+        # todo: shape of y is not yet defined
         return x, y
 
 
 if __name__ == "__main__":
 
-    x_dir = '/data1/jiapan/Dataset/BA/joints_val_img'
-    y_file = '/data1/jiapan/Dataset/BA/val_set.csv'
+    x_dir = '../seperate_waste_piece_train/images_withoutrect/'
+    y_file = './train.json'
     tr = ReadDataSource(x_dir, y_file)
 
-    trld = DataLoader(dataset=tr, batch_size=4, shuffle=False)
+    trld = DataLoader(dataset=tr, batch_size=4, shuffle=True, drop_last=True)
     for idx, (x, y) in enumerate(trld):
         print('batch_', idx)
         print('x.shape:', x.shape)
